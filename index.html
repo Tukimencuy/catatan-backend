@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catatan App</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  </head>
+  <body class="bg-light">
+    <div class="container my-5">
+      <!-- Header -->
+      <h1 class="text-center text-success mb-4">Catatan App</h1>
+
+      <!-- Form to add new note -->
+      <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+          <div class="card shadow-sm border-light">
+            <div class="card-body">
+              <h5 class="card-title text-center">Buat Catatanmu</h5>
+              <form id="note-form">
+                <input type="hidden" id="note-id" />
+                <div class="mb-3">
+                  <label for="title" class="form-label">Judul</label>
+                  <input type="text" class="form-control" id="title" placeholder="Enter note title" required />
+                </div>
+                <div class="mb-3">
+                  <label for="content" class="form-label">Konte Isi</label>
+                  <textarea class="form-control" id="content" rows="4" placeholder="Enter note content" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Simpan</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tampilkan Notes -->
+      <div class="row mt-4" id="note-list"></div>
+    </div>
+
+    <!-- Bootstrap JS and Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      const apiUrl = 'http://localhost:5000/notes';
+
+      // Buat note
+      function saveNote() {
+        const title = document.getElementById('title').value;
+        const content = document.getElementById('content').value;
+        const noteId = document.getElementById('note-id').value;
+
+        const noteData = { title, content };
+
+        let request;
+        if (noteId) {
+          // Update existing note
+          request = fetch(`${apiUrl}/${noteId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(noteData),
+          });
+        } else {
+          // Create new note
+          request = fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(noteData),
+          });
+        }
+
+        request
+          .then((response) => response.json())
+          .then((data) => {
+            console.log('Note saved:', data);
+            loadNotes(); // Refresh the list of notes
+            resetForm(); // Clear form after saving
+          })
+          .catch((error) => console.error('Error:', error));
+      }
+
+      // Tampilkan notes dari API
+      function loadNotes() {
+        fetch(apiUrl)
+          .then((response) => response.json())
+          .then((data) => {
+            const noteList = document.getElementById('note-list');
+            noteList.innerHTML = ''; // Clear current list
+            data.forEach((note) => {
+              const noteDiv = document.createElement('div');
+              noteDiv.classList.add('col-md-6', 'col-lg-4', 'mb-4');
+              noteDiv.innerHTML = `
+                <div class="card shadow-sm border-light">
+                  <div class="card-body">
+                    <h5 class="card-title">${note.title}</h5>
+                    <p class="card-text">${note.content}</p>
+                    <button class="btn btn-warning btn-sm" onclick="editNote('${note._id}')">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteNote('${note._id}')">Delete</button>
+                  </div>
+                </div>
+              `;
+              noteList.appendChild(noteDiv);
+            });
+          })
+          .catch((error) => console.error('Error:', error));
+      }
+
+      // Edit note
+      function editNote(id) {
+        fetch(`${apiUrl}/${id}`)
+          .then((response) => response.json())
+          .then((data) => {
+            document.getElementById('note-id').value = data._id;
+            document.getElementById('title').value = data.title;
+            document.getElementById('content').value = data.content;
+          })
+          .catch((error) => console.error('Error:', error));
+      }
+
+      // Hapus note
+      function deleteNote(id) {
+        if (confirm('Are you sure you want to delete this note?')) {
+          fetch(`${apiUrl}/${id}`, {
+            method: 'DELETE',
+          })
+            .then(() => {
+              console.log('Note deleted');
+              loadNotes(); // Refresh the list of notes
+            })
+            .catch((error) => console.error('Error:', error));
+        }
+      }
+
+      // Reset form
+      function resetForm() {
+        document.getElementById('note-id').value = '';
+        document.getElementById('title').value = '';
+        document.getElementById('content').value = '';
+      }
+
+      // Load notes initially
+      loadNotes();
+
+      // Add event listener to the form
+      document.getElementById('note-form').addEventListener('submit', function (event) {
+        event.preventDefault(); // Prevent form from submitting normally
+        saveNote(); // Save the note (either create or update)
+      });
+    </script>
+  </body>
+</html>
